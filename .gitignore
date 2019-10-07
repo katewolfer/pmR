@@ -34,3 +34,15 @@ vignettes/*.pdf
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md
+
+# data
+240715_LV_RP_pos_QC01.mzML
+240715_LV_RP_pos_QC02.mzML
+240715_LV_RP_pos_QC03.mzML
+240715_LV_RP_pos_QC04.mzML
+240715_LV_RP_pos_QC05.mzML
+240715_LV_RP_pos_QC06.mzML
+240715_LV_RP_pos_QC07.mzML
+240715_LV_RP_pos_QC08.mzML
+240715_LV_RP_pos_QC09.mzML
+240715_LV_RP_pos_QC10.mzML

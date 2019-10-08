@@ -12,11 +12,11 @@ require(BiocParallel)
 require(rgl)
 require(RColorBrewer)
 
-if (!requireNamespace("BiocManager", quietly = TRUE))
-  install.packages("BiocManager")
-
-BiocManager::install("xcms", lib="C:/Program Files/R/R-3.5.3/library")
-BiocManager::install("BiocParallel", lib="C:/Program Files/R/R-3.5.3/library")
+## for installing BiocParallel and XCMS
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+#   install.packages("BiocManager")
+# BiocManager::install("xcms", lib="C:/Program Files/R/R-3.5.3/library")
+# BiocManager::install("BiocParallel", lib="C:/Program Files/R/R-3.5.3/library")
 
 
 ## set Proteowizard program path

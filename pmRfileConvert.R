@@ -27,7 +27,8 @@ pmRfileConvert <- function(proteowizardPath,targetFolder, saveFolder) {
                                           filePath, 
                                           '-o', 
                                           saveFolder, 
-                                          '--zlib --filter "scanEvent 1"', 
+                                          #'--zlib --filter "scanEvent 1"', 
+                                          '--zlib --filter "msLevel2-"',
                                           sep=' '))
   }
   

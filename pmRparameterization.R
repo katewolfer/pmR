@@ -12,7 +12,7 @@ pmRparameterization <- function(wd, QCindices) {
   fileSelection <- c(fileSelection, length(list.files(wd)))
   
   ## import file using xcmsRaw
-  checkFile <- xcmsRaw(fileList[1], profstep = 0.1)
+  checkFile <- xcmsRaw(fileList[9], profstep = 0.1, includeMSn=FALSE)
   
   # get number of cores for parallelization
   nCores = round(detectCores(all.tests = FALSE, logical = TRUE)*0.75)

@@ -28,14 +28,14 @@ Quantification of features
 Checking run order effects
 
 ### general statistics
-# unvariate statistics in conjunction with metadata:
-# boxplots, ROC curves, Cohen's D, cross-validation, correlation, linear regression
-# PCA
-# PLS
-# multiple comparisions and FDR
-# multiple linear regression
-# multiblock analysis
-# correlation heatmaps
-# Volcano plots
-# metadata statistics
-# checking normality of feature distributions for univariate testing
+unvariate statistics in conjunction with metadata:
+boxplots, ROC curves, Cohen's D, cross-validation, correlation, linear regression
+PCA
+PLS
+multiple comparisions and FDR
+multiple linear regression
+multiblock analysis
+correlation heatmaps
+Volcano plots
+metadata statistics
+checking normality of feature distributions for univariate testing

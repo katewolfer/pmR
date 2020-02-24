@@ -1,4 +1,4 @@
-pmRfileConvert <- function(proteowizardPath,targetFolder, saveFolder) {
+pmRMSfileConvert <- function(proteowizardPath,targetFolder, saveFolder) {
 
   #####################################
   ## pmR package                     ##
@@ -27,11 +27,17 @@ pmRfileConvert <- function(proteowizardPath,targetFolder, saveFolder) {
                                           filePath,
                                           '-o',
                                           saveFolder,
-                                          '--zlib --filter "scanEvent 1"',
+                                          #'--zlib --filter "scanEvent 1"',
                                           #'--zlib --filter "lockmassRefiner mz=556.2771"',
                                           #'--zlib --filter "msLevel2-"',
                                           sep=' '))
   }
+
+  #print(proteowizardPath)
+  #print(targetFiles)
+  #print(saveFolder)
+  #print(inputCmd)
+  #print(inputCmd_100)
 
   ## Run
   setwd(proteowizardPath)

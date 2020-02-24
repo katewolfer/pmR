@@ -23,9 +23,9 @@ formulaTo Mass
 Exploration of MSn data with user input for optimal data extraction  
 Database matching - AADB, Pubchem, LipidMaps, HMDB, KEGG  
 
-## pmRquant
-Quantification of features 
-Checking run order effects
+## pmRquant  
+Quantification of features  
+Checking run order effects  
 
 ### general statistics
 unvariate statistics in conjunction with metadata:  

@@ -15,13 +15,13 @@ Future feature - BPI chromatogram plotting
 Automated parameter selection for xcms processing of datasets
 
 ### pmRexpandList
-Expands on simple chemical formula lists to obtain monoisotopic masses of common adducts
-Can be used with (function) to match masses in processed LC-MS data
+Expands on simple chemical formula lists to obtain monoisotopic masses of common adducts  
+Can be used with (function) to match masses in processed LC-MS data  
 formulaTo Mass
 
 ## pmRmsN
-Exploration of MSn data with user input for optimal data extraction
-Database matching - AADB, Pubchem, LipidMaps, HMDB, KEGG
+Exploration of MSn data with user input for optimal data extraction  
+Database matching - AADB, Pubchem, LipidMaps, HMDB, KEGG  
 
 ## pmRquant
 Quantification of features 

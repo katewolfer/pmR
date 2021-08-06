@@ -1,4 +1,10 @@
-expandList <- function(df, ppm, polarityMode) {
+pmRexpandList <- function(df, ppm, polarityMode) {
+
+  #####################################
+  ## pmR package                     ##
+  ## Kate Wolfer, Universitaet Basel ##
+  ## v1.0, 03 October 2019           ##
+  #####################################
 
   ## monoisotopic masses of elements
   H <- 1.007825
@@ -29,9 +35,9 @@ expandList <- function(df, ppm, polarityMode) {
                   "[M+CH3OH+H]+",
                   "[M+K]+",
                   "[M+ACN+H]+",
-                  "[M+IsoProp+H]+",
+                  #"[M+IsoProp+H]+",
                   "[M+H+H2O]+",
-                  "[M+Li]+",
+                  #"[M+Li]+",
                   "[2M+H]+",
                   "[M+H-H2O]+")
 
@@ -42,7 +48,7 @@ expandList <- function(df, ppm, polarityMode) {
                   "[M+Cl]-",
                   "[M+FA-H]-",
                   "[M+CH3COO]-",
-                  "[M+F]-",
+                  #"[M+F]-",
                   "[2M-H]-")
 
   }
@@ -52,9 +58,10 @@ expandList <- function(df, ppm, polarityMode) {
   dimsFreshDB <- nrow(df)*rowsToAdd
 
   ## create the new database
-  newColNames <- c("compound","source","monoisotopic","formula","adduct","adduct_mass","lower_ppm","upper_ppm")
-  expDF <- data.frame(matrix(NA, nrow = dimsFreshDB, ncol = length(newColNames)))
-  colnames(expDF) <- newColNames
+  newColNames <- c("adduct","adduct_mass","lower_ppm","upper_ppm")
+  expDF <- data.frame(matrix(NA, nrow = dimsFreshDB, ncol = length(newColNames)+ncol(df)))
+  colnames(expDF)[c(1:ncol(df))] <- colnames(df)
+  colnames(expDF)[c((ncol(df)+1):(ncol(df)+4))] <- newColNames
 
   ## back up the monoisotopic masses to do a calculation check
   df$check <- df$monoisotopic
@@ -66,7 +73,7 @@ expandList <- function(df, ppm, polarityMode) {
 
   for (i in 1:nrow(df)) {
 
-    df$monoisotopic[i] <- formulaToMass(df$formula[i])
+    #df$monoisotopic[i] <- formulaToMass(df$formula[i])
 
     ## select the calculated mass
     M <- df$monoisotopic[i]
@@ -75,8 +82,8 @@ expandList <- function(df, ppm, polarityMode) {
     toAdd <- rowsToAdd-1
 
     ## populate with feature details
-    expDF[c(rowCounter:(rowCounter+toAdd)),c(1:4)] <- df[i,]
     expDF$adduct[c(rowCounter:(rowCounter+toAdd))] <- polarity
+    expDF[c(rowCounter:(rowCounter+toAdd)), c(1:ncol(df))] <- df[i,]
 
     if (polarityMode == "pos") {
 
@@ -88,9 +95,9 @@ expandList <- function(df, ppm, polarityMode) {
                       M+C+(H*4)+O-e,
                       M+K-e,
                       M+(C*2)+(H*3)+N-e,
-                      M+(C*3)+(H*8)+O-e,
+                      #M+(C*3)+(H*8)+O-e,
                       M+(H*3)+O-e,
-                      M+Li-e,
+                      #M+Li-e,
                       (2*M)+H-e,
                       M-H-O-e)
 
@@ -102,13 +109,15 @@ expandList <- function(df, ppm, polarityMode) {
                       M+Cl+e,
                       M+(C+H+(2*O))+e,
                       M+((2*C)+(3*H)+(2*O))+e,
-                      M+Fl+e,
+                      #M+Fl+e,
                       (2*M)-H+e)
 
     }
 
     ## populate adduct masses
+    expDF$adduct[c(rowCounter:(rowCounter+toAdd))] <- polarity
     expDF$adduct_mass[c(rowCounter:(rowCounter+toAdd))] <- adductMass
+
 
     ## add ppm range values
     massRange <- adductMass*(ppm/1000000)
@@ -118,11 +127,8 @@ expandList <- function(df, ppm, polarityMode) {
 
   }
 
-  #expDF <- expDF[-which(is.na(expDF$feature) == TRUE),]
-
+  cat(df$check == df$monoisotopic)
   return(expDF)
-
-  print(df$check == df$monoisotopic)
 
 }
 

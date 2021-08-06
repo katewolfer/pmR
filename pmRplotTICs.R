@@ -1,102 +1,62 @@
-pmRplotTICs <- function(fileList){
+pmRplotTICs <- function(){
 
-  #####################################
-  ## pmR package                     ##
-  ## Kate Wolfer, Universitaet Basel ##
-  ## v1.0, 03 October 2019           ##
-  #####################################
+  require(MSnbase)
+  require(ggplot2)
 
-  ## function to automatically plot TICs in the directory of converted files
+  ## list all the mzML files in the directory
+  fileList <- list.files(getwd(), pattern = "mzML")
 
-  if(exists(fileList)){
-  } else{
-    fileList <- list.files(getwd())
+  ## pull out all the BPI data
+  raw_data <- readMSData(files = fileList,mode = "onDisk")
+  chr_raw <- chromatogram(raw_data,aggregationFun = "max")
+  cat("All raw data imported \n")
+
+  ## reshape the data as Xcalibur saves the data with time disjoints
+  pullRT <- NULL
+  for(b in 1:length(chr_raw)){
+    pullRT <- c(pullRT, chr_raw@.Data[[b]]@rtime)
   }
 
-  getPolarity <- NULL
-  lengthTIC <- NULL
-  lengthSC <- NULL
+  pullRT <- unique(sort(pullRT))
+  df <- as.data.frame(pullRT)
+  rownames(df) <- c(1:nrow(df))
+  colnames(df) <- "rt"
 
-  for (i in 1:length(fileList)){
-    checkFile <- xcmsRaw(fileList[i], profstep = 10)
-    if(i == 1){
-      allTICs <- list(checkFile@tic)
-      allSC <- list(checkFile@scantime)
-
-    } else {
-      allTICs[i] <- list(checkFile@tic)
-      allSC[i] <- list(checkFile@scantime)
+  for(k in 1:length(chr_raw)){
+    for(c in 1:nrow(df)){
+      findRT <- which(df[c,1] == chr_raw@.Data[[k]]@rtime)
+      if(length(findRT) > 0){
+        df[c,k+1] <- chr_raw@.Data[[k]]@intensity[findRT]
+      }
     }
-
-    lengthTIC[i] <- length(checkFile@tic)
-    lengthSC[i] <- length(checkFile@scantime)
-    getPolarity[i] <- levels(factor(checkFile@polarity))
   }
+  cat("All RT points aligned with intensity values \n")
+  colnames(df)[c(2:(length(chr_raw)+1))] <- chr_raw@phenoData[[1]]
 
-  ## define the run polarity - this is not a failsafe method for other people's
-  ## sample lists!!!
-  checkPos <- sum(getPolarity == 'positive')
-  checkNeg <- sum(getPolarity == 'negative')
+  ## melt the dataframe because ggplot2 prefers this
+  meltFeature <- melt(df, id.vars = "rt")
+  ## this line needed to get actual line plot, else loess smoothing needed
+  ## loess span does not handle this level of resolution well
+  meltFeature <- meltFeature[-which(is.na(meltFeature$value)),]
 
-  if (checkPos == 0){
-    definePolarity = 'positive'
-  } else if (checkNeg == 0){
-    definePolarity ='positive'
-  } else if (checkNeg > checkPos){
-    definePolarity = 'negative'
-  } else if (checkPos > checkNeg){
-    definePolarity ='positive'}
+  ## construct the plot
+  TICplot <- ggplot(data = meltFeature, aes(x = rt, y = value, color = variable))
+  TICplot <- TICplot + geom_line(size = 0.7, na.rm = TRUE)
+  TICplot <- TICplot + xlab('retention time (mins)') + ylab('intensity (arbitrary units)')
+  TICplot <- TICplot + theme(plot.title = element_text(hjust = 0.5, size = 18))
+  TICplot <- TICplot + theme(axis.line = element_line(colour = "black"),
+                             panel.grid.minor = element_line(colour="light grey",
+                                                             size=0.01),
+                             panel.border = element_blank(),
+                             panel.grid.major = element_line(colour="light grey",
+                                                             size=0.01),
+                             panel.background = element_blank())
+  TICplot <- TICplot + scale_x_continuous(expand = c(0,0))
+  TICplot <- TICplot + scale_y_continuous(expand = c(0,0))
+  TICplot <- TICplot + labs(colour='sample') + theme(legend.position = c(0.90,0.90))
 
-  cat(paste0("Polarity of run: ", definePolarity))
-
-  ## get minimum scan length for all TICs
-  alignTimes <- NULL
-  for (i in 1:length(allSC)){
-    alignTimes[i] <- length(unlist(allSC[i]))
-  }
-  minSC <- min(alignTimes)
-
-  ## scantimes
-  checkSC <- unlist(allSC[1])
-  checkSC <- as.matrix(checkSC[1:minSC])
-  for(i in 2:length(allSC)){
-    pullSC <- as.matrix(unlist(allSC[i]))
-    checkSC <- cbind(checkSC, pullSC[1:minSC])
-  }
-
-  cat("Collecting scantimes ...")
-
-  ## retention times
-  checkTICs <- unlist(allTICs[1])
-  checkTICs <- as.matrix(checkTICs[1:minSC])
-  for(i in 2:length(allTICs)){
-    pullTICs <- as.matrix(unlist(allTICs[i]))
-    checkTICs <- cbind(checkTICs, pullTICs[1:minSC])
-  }
-
-  cat("Collecting TIC values ...")
-
-  allTICs = as.data.frame(cbind(checkSC[,1],checkTICs))
-  colnames(allTICs) <- c('RT', fileList)
-
-  ## melt dataframe for faster plotting
-  meltTICs <- melt(allTICs, id.vars = "RT")
-  findMax <- max(meltTICs$value, na.rm = TRUE)
-  meltTICs$RT <- as.numeric(paste(meltTICs$RT))/60
-
-  ## produce single plot of all TICs
-  p1 <- ggplot(meltTICs, aes(x=RT, y=value, col=variable)) + geom_line()
-  p1 <- p1 +  xlab('RT (mins)') + ylab('intensity')
-  p1 <- p1 + theme(plot.title = element_text(hjust = 0.5, size = 18))
-  p1 <- p1 + theme(axis.line = element_line(colour = "black"),
-                   panel.grid.minor = element_line(colour="light grey", size=0.01),
-                   panel.border = element_blank(),
-                   panel.grid.major = element_line(colour="light grey", size=0.01),
-                   panel.background = element_blank())
-  p1 <- p1 + scale_x_continuous(expand = c(0, 0), breaks = seq(0, max(allTICs[,1]), by = 1))
-  p1 <- p1 + scale_y_continuous(expand = c(0, 0), breaks = seq(0, findMax, by = 20000000))
-  p1 <- p1 + labs(color=paste(definePolarity, 'ESI mode chromatograms'))
-
-  return(p1)
+  return(TICplot)
 
 }
+
+

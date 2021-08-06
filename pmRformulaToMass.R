@@ -45,7 +45,7 @@ formulaToMass <- function(formulas) {
     }
   }
 
-  ## find each eement in the formula and extract the relevant numbers
+  ## find each element in the formula and extract the relevant numbers
   listElements <- c("C","H","N","O","S","P")
 
   for (g in 1:6){

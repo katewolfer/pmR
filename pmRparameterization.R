@@ -1,4 +1,4 @@
-pmRparameterization <- function(wd, QCindices) {
+pmRparameterization <- function(keyFile, QCindices) {
 
   #####################################
   ## pmR package                     ##
@@ -6,49 +6,79 @@ pmRparameterization <- function(wd, QCindices) {
   ## v1.0, 03 October 2019           ##
   #####################################
 
-  wd <- getwd()
-  # install MSnbase for BPI chromatograms
-  if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
-  BiocManager::install("MSnbase")
-  require(MSnbase)
-  require(xcms)
-
-  ## parameters to be defined for processing
-  CPWmin = 1
-  CPWmax = 15
-  ppm = 6
-  xsnthresh = 6
-  LM=F
-  integrate=2
-  nCores = 4
-  prefilter = c(7,1000)
-  #mslevel
-
-  BPPARAM <- SnowParam(nCores)
-  RTerror=6
-  MZerror=0.05
-
-
-  minFrac.val=0.50
-  cv.threshold=0.2
-  bw=6
-
-  # select files to examine - every 5th file here - ensure final file is included
-  fileList <- list.files(wd)
-  fileSelection <- seq(from = 1, to = length(list.files(wd)), by = 5)
-  fileSelection <- c(fileSelection, length(list.files(wd)))
+  # select files to examine
+  fileList <- list.files(getwd(), pattern = "cdf")
 
   ## import file using xcmsRaw
-  checkFile <- xcmsRaw(fileList[1], profstep = 0.1, includeMSn=FALSE)
-  #plotTIC(checkFile)
+  checkFile <- xcmsRaw(fileList[3], profstep = 0.1, includeMSn=FALSE)
+
+  ######################
+  ## Plotting of TICs ##
+  ######################
+
+  # ## get file list and types
+  # startList <- 1
+  # endList <- 56
+  # keyFile <-  read.csv("eliquid experiments May 2020.csv")
+  # trimFilenames <- paste(gsub( ".mzML", "", fileList[c(startList:endList)]))
+  # findFiles <- which(is.element(keyFile$fileName, trimFilenames))
+  # keyFile$sample[findFiles]
+
+  # slow - uses xcms functions currently
+  # Future feature - BPI chromatogram plotting
+  source("pmRplotTICs.R")
+  TICplot <- pmRplotTICs(fileList[2])
+  backupPlot <- TICplot # back up the original plot
+  TICplot
+
+  # reduce windows for viewing
+  TICplot <- TICplot + coord_cartesian(ylim = c(0,1.5e9))
+  TICplot <- TICplot + coord_cartesian(xlim = c(0,3))
+
+  ggsave("TICplot_14Sept2020.png", plot = TICplot, device = NULL, path = NULL,
+         scale = 1, width = 32, height = 16, dpi = 600,units = c("cm"))
+
+  # for single file
+  ## produce TIC plot
+  pullData <- as.data.frame(cbind(checkFile@scantime, checkFile@tic))
+  colnames(pullData) <- c("RT", "intensity")
+
+  p1 <- ggplot(pullData, aes(x=RT, y=intensity))
+  p1 <- p1 + geom_line(na.rm = TRUE)
+  p1 <- p1 +  xlab('RT (s)') + ylab('intensity')
+  p1 <- p1 + theme(plot.title = element_text(hjust = 0.5, size = 18))
+  p1 <- p1 + theme(axis.line = element_line(colour = "black"),
+                   panel.grid.minor = element_line(colour="light grey", size=0.01),
+                   panel.border = element_blank(),
+                   panel.grid.major = element_line(colour="light grey", size=0.01),
+                   panel.background = element_blank())
+  p1
 
   # pick peaks from data for assessment
-  peak <- findPeaks.centWave(checkFile, peakwidth=c(5,25), ppm=5, noise=1000) # scanrange=c(50,70))
-
-  # peak <- findPeaks.matchedFilter(checkFile,scanrange=c(100,400)) # for profile data
+  peak <- findPeaks.matchedFilter(checkFile,step = 0.02, mzdiff = 0.001) # scanrange=c(50,70))
+  #peak <- findPeaks(checkFile,method = "centWave")
+  #peak <- findPeaks.matchedFilter(checkFile,scanrange=c(100,400)) # for profile data
   #plotPeaks(checkFile, peak)
   peakData <- as.data.frame(peak@.Data)
+  peakData <- peakData[order(peakData$rt),]
+
+  BPI <- peakData[,c("rt", "into")]
+  BPI$duplic <- duplicated(BPI$rt)
+  BPI$remove <- FALSE
+
+  for (i in 1:nrow(BPI)){
+    if (BPI$duplic[i] == FALSE){
+    } else {
+      findAll <- which(BPI$rt == BPI$rt[i])
+      findMax <- max(BPI$into[findAll])
+      findKeeper <- which(BPI$into[findAll] == findMax)
+      BPI$remove[findAll[-findKeeper]] <- TRUE
+    }
+  }
+
+  BPI <- BPI[-which(BPI$remove == TRUE),]
+  BPI$rt <- BPI$rt/60
+  plot(BPI$rt, BPI$into)
 
   # ## plot the difference between into and intb in the peak picking
   # p <- ggplot(data = peakData) + geom_line(data = peakData,
@@ -67,21 +97,21 @@ pmRparameterization <- function(wd, QCindices) {
   # p <- p + ylab("Intensity")
   # p
 
-  ## try to make a BPI
-  peakInfo <- peakData[c("rt", "into")]
-  peakInfo <- peakInfo[order(peakInfo$rt),]
-  plot(peakInfo$rt, peakInfo$into, type = 'l')
-
-  # https://bioconductor.org/packages/devel/bioc/vignettes/xcms/inst/doc/xcms.html
-  raw_data <- readMSData(files = fileList[c(17,19,21,23)], pdata = new("NAnnotatedDataFrame", pd),
-                         mode = "onDisk")
-
-  bpis <- chromatogram(checkFile, aggregationFun = "max")
-
-  # get number of cores for parallelization
-  totalCores <- detectCores(all.tests = FALSE, logical = TRUE)
-  nCores <- round(totalCores*0.75)
-  BPPARAM <- SnowParam(nCores)
+  # ## try to make a BPI
+  # peakInfo <- peakData[c("rt", "into")]
+  # peakInfo <- peakInfo[order(peakInfo$rt),]
+  # plot(peakInfo$rt, peakInfo$into, type = 'l')
+  #
+  # # https://bioconductor.org/packages/devel/bioc/vignettes/xcms/inst/doc/xcms.html
+  # raw_data <- readMSData(files = fileList, pdata = new("NAnnotatedDataFrame", pd),
+  #                        mode = "onDisk")
+  #
+  # bpis <- chromatogram(checkFile, aggregationFun = "max")
+  #
+  # # get number of cores for parallelization
+  # totalCores <- detectCores(all.tests = FALSE, logical = TRUE)
+  # nCores <- round(totalCores*0.75)
+  # BPPARAM <- SnowParam(nCores)
 
 ## Signal to noise calculation
 
@@ -109,14 +139,24 @@ pmRparameterization <- function(wd, QCindices) {
   # maximum chromatographic peak width in s - NEEDS CALCULATION
   CPWmax <- 25
 
-  ##
-  checkParams <- xcmsSet(#fileList[fileSelection],
-                         method = "centWave",
-                         peakwidth = c(CPWmin,CPWmax),
-                         ppm = 10,
-                         integrate = 2,
+  ## actually start processing whole dataset here - select peak picking
+  ## depending on centroid or profile data
+
+  ## CENTROIDED
+  # checkParams <- xcmsSet(fileList,
+  #                        #method = "centWave",
+  #                        method = "matchedFilter",
+  #                        peakwidth = c(CPWmin,CPWmax),
+  #                        ppm = 2,
+  #                        integrate = 2,
+  #                        BPPARAM = BPPARAM,
+  #                        mzCenterFun="wMean",
+  #                        mzdiff = -0.0001)
+
+  ## PROFILE
+  checkParams <- xcmsSet(fileList,
+                         method = "matchedFilter",
                          BPPARAM = BPPARAM,
-                         mzCenterFun="wMean",
                          mzdiff = -0.001)
 
   showError(checkParams)
@@ -129,49 +169,65 @@ pmRparameterization <- function(wd, QCindices) {
                    method="obiwarp",
                    profStep=0.1,
                    plottype="deviation",
-                   center=5)
+                   center=1)
   end_time <- Sys.time()
   end_time - start_time
 
-  start_time <- Sys.time()
-  obagds_01 <- retcor(checkParams,
-                   method="obiwarp",
-                   profStep=0.01,
-                   plottype="deviation",
-                   center=5)
-  end_time <- Sys.time()
-  end_time - start_time
+  # start_time <- Sys.time()
+  # obagds_01 <- retcor(checkParams,
+  #                  method="obiwarp",
+  #                  profStep=0.01,
+  #                  plottype="deviation",
+  #                  center=5)
+  # end_time <- Sys.time()
+  # end_time - start_time
 
   #  Group peaks together across samples
-  bw = 6 # adjust
+  bw = 10 # adjust
   MZerror = 0.001
+  gagds <- group(obagds, method="density", mzwid=MZerror, bw=bw)
 
-  gagds6 <- group(obagds, method="density", mzwid=MZerror, bw=6)
-  gagds10 <- group(obagds, method="density", mzwid=MZerror, bw=10)
-  gagds3 <- group(obagds, method="density", mzwid=MZerror, bw=3)
+  # length(intersect(gagds3@groups[,4], gagds10@groups[,4]))
+  # length(intersect(gagds3@groups[,1], gagds10@groups[,1]))
+  # maxRTshift <- max(gagds@groups[,6] - gagds@groups[,5])
 
-  length(intersect(gagds3@groups[,4], gagds10@groups[,4]))
-  length(intersect(gagds3@groups[,1], gagds10@groups[,1]))
+  # replace peaks with zero intensity with background value
+  fds <- fillPeaks(gagds)
+  fill <- fds
+  vals.raw <- groupval(fill, "medret", "into")
+  vals.raw.meta <- cbind(groups(fill), vals.raw)
+  write.csv(vals.raw.meta, file="extracted_peaks.csv")
 
-  maxRTshift <- max(gagds@groups[,6] - gagds@groups[,5])
-
-  # # retention time shift in s
-  # RTerror = 0
+  # # finalised parameters and output
+  # output <- list('CPWmin' = CPWmin,
+  #                'CPWmax' = CPWmax,
+  #                'ppm' = ppm,
+  #                'LM' = F,
+  #                'integrate' = 2,
+  #                'BPPARAM'= BPPARAM,
+  #                'mzCenterFun' = "wMean",
+  #                'prefilter' = c(scans, intensity))
   #
-  # # m/z movement in Da
-  # MZerror = 0
+  # return(output)
+  #
 
-  # finalised parameters and output
-  output <- list('CPWmin' = CPWmin,
-                 'CPWmax' = CPWmax,
-                 'ppm' = ppm,
-                 'LM' = F,
-                 'integrate' = 2,
-                 'BPPARAM'= BPPARAM,
-                 'mzCenterFun' = "wMean",
-                 'prefilter' = c(scans, intensity))
 
-  return(output)
+  ## View annotated peaks
+
+  annotatedPeaks <- read.csv("eliquid annotated peaks.csv")
+  annotatedPeaks <- annotatedPeaks[which(annotatedPeaks$putative.ID != ""),]
+
+  rtr <- c(annotatedPeaks$rtmin[i], annotatedPeaks$rtmin[i])
+  mzr <- c(annotatedPeaks$mzmin[i], annotatedPeaks$mzmin[i])
+  plot.xcmsEIC(fds, rtrange = rtr)
+  xeic.corrected <- getEIC(fds, rt = "corrected", groupidx = 1:nrow(fds@groups))
+
+  i = 5
+  plot(xeic.corrected, fds,
+       groupidx=which(paste(rownames(vals.raw.meta)) == annotatedPeaks$tag[i]),
+       col = c("orange", "blue"), main = NULL)
+
+  title("change this")
 
 }
 

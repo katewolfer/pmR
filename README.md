@@ -37,3 +37,7 @@ correlation heatmaps
 Volcano plots  
 metadata statistics  
 checking normality of feature distributions for univariate testing  
+  
+## To add:
+- van Krevelen plots  
+- double bond equivalent plots, H/C and O/C ratio plots
